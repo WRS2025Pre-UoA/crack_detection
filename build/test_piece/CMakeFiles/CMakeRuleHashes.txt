@@ -1,2 +1,0 @@
-# Hashes of file build rules.
-fbcb07741b6f7dbb9653fd73c61d4f37 CMakeFiles/test_piece_uninstall
