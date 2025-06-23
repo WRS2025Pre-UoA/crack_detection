@@ -321,7 +321,7 @@ void plot_results(cv::Mat img, std::vector<YoloResults>& results,
 
 
                 // 表示・保存
-                fs::path output_folder = "/home/user/crack_detection/results_cut";
+                fs::path output_folder = "results_cut";
                 std::string extension = ".png";
                 std::ostringstream oss;
                 oss << file_name << "_" << instance_counter << extension;
@@ -415,8 +415,8 @@ void plot_results(cv::Mat img, std::vector<YoloResults>& results,
 
 int main()
 {    
-    std::string image_folder = "/home/user/crack_detection/original_imgs";
-    const std::string& modelPath = "/home/user/crack_detection/checkpoints/best_n_ex_2.onnx";
+    std::string image_folder = "original_imgs";
+    const std::string& modelPath = "checkpoints/best_n_ex_2.onnx";
     const std::string& onnx_provider = OnnxProviders::CPU;
     const std::string& onnx_logid = "yolov8_inference2";
     float mask_threshold = 0.5f;
@@ -451,11 +451,11 @@ int main()
 
             fs::path output_path_ex = output_path;
 
-            fs::create_directories("/home/user/crack_detection/results");
+            fs::create_directories("results");
 
             output_path += entry.path().extension();
             //output_path = entry.path().parent_path() / output_path;
-            output_path = fs::path("/home/user/crack_detection/results") / output_path;
+            output_path = fs::path("results") / output_path;
 
             cv::cvtColor(img, img, cv::COLOR_RGB2BGR);
             cv::Size show_shape = img.size();
