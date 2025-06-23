@@ -1,0 +1,10 @@
+/home/user/crack_detection/build/test_piece/CMakeFiles/install/local.dir
+/home/user/crack_detection/build/test_piece/CMakeFiles/install.dir
+/home/user/crack_detection/build/test_piece/CMakeFiles/list_install_components.dir
+/home/user/crack_detection/build/test_piece/CMakeFiles/rebuild_cache.dir
+/home/user/crack_detection/build/test_piece/CMakeFiles/edit_cache.dir
+/home/user/crack_detection/build/test_piece/CMakeFiles/test.dir
+/home/user/crack_detection/build/test_piece/CMakeFiles/test_piece_uninstall.dir
+/home/user/crack_detection/build/test_piece/CMakeFiles/uninstall.dir
+/home/user/crack_detection/build/test_piece/CMakeFiles/install/strip.dir
+/home/user/crack_detection/build/test_piece/CMakeFiles/test_piece.dir
