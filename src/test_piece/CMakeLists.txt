@@ -27,6 +27,11 @@ target_link_libraries(${PROJECT_NAME}
   onnxruntime
 )
 
+set_target_properties(test_piece PROPERTIES 
+ INSTALL_RPATH "$(ONNXRUNTIME_DIR)"
+ BUILD_RPATH "$(ONNXRUNTIME_DIR)"
+)
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
