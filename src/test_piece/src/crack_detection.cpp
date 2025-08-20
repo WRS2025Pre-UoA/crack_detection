@@ -214,34 +214,52 @@ void plot_results(cv::Mat img, std::vector<YoloResults>& results,
         kptColorPalette.push_back(posePalette[index]);
     }
 
-    for (const auto& res : results) {
-        float left = res.bbox.x;
-        float top = res.bbox.y;
-        int color_num = res.class_idx;
+    float min_dis = 9999;
+    float left = 0;
+    float top = 0;
+    const YoloResults* res = nullptr;
 
+    for (const auto& res_ : results) {
+        float left_ = res_.bbox.x;
+        float top_ = res_.bbox.y;
+        int color_num_ = res_.class_idx;
+        float center_x = left_ + res_.bbox.width/2.0f;
+        float center_y = top_ + res_.bbox.height/2.0f;
+        float dx = center_x - raw_image_shape.width/2.0f;
+        float dy = center_y - raw_image_shape.height/2.0f;
+        float distance = std::sqrt(std::pow(dx,2) + std::pow(dy,2));
+        if(min_dis > distance){
+            res = &res_;
+            left = left_;
+            top = top_;
+            min_dis = distance;
+        }
+    }
+
+    if (results.size() != 0){
         // Draw bounding box
-        rectangle(img, res.bbox, color[res.class_idx], 2);
+        rectangle(img, res->bbox, color[res->class_idx], 2);
 
         // Try to get the class name corresponding to the given class_idx
         std::string class_name;
-        auto it = names.find(res.class_idx);
+        auto it = names.find(res->class_idx);
         if (it != names.end()) {
             class_name = it->second;
         }
         else {
-            std::cerr << "Warning: class_idx not found in names for class_idx = " << res.class_idx << std::endl;
+            std::cerr << "Warning: class_idx not found in names for class_idx = " << res->class_idx << std::endl;
             // Then convert it to a string anyway
-            class_name = std::to_string(res.class_idx);
+            class_name = std::to_string(res->class_idx);
         }
 
         // Draw mask if available
-        if (res.mask.rows && res.mask.cols > 0) {
-            mask(res.bbox).setTo(color[res.class_idx], res.mask);
+        if (res->mask.rows && res->mask.cols > 0) {
+            mask(res->bbox).setTo(color[res->class_idx], res->mask);
 
             // 元のマスク（0 or 1 の2値）を取得
-            if (res.mask.rows > 0 && res.mask.cols > 0) {
-                cv::Mat cropped_img = img(res.bbox).clone();
-                cv::Mat mask = res.mask.clone();
+            if (res->mask.rows > 0 && res->mask.cols > 0) {
+                cv::Mat cropped_img = img(res->bbox).clone();
+                cv::Mat mask = res->mask.clone();
 
                 // マスクを255スケールに変換
                 cv::Mat mask_bin;
@@ -279,7 +297,7 @@ void plot_results(cv::Mat img, std::vector<YoloResults>& results,
                     if (diff > max_diff) { max_diff = diff; tr = pt; }  // top-right
                 }
 
-                float shrink_ratio = 0.05f; // 3% 縮小
+                float shrink_ratio = 0.05f; // % 縮小
 
                 // 四隅の点（前コードの tl, tr, br, bl）
                 std::vector<cv::Point2f> quad_pts = { tl, tr, br, bl };
@@ -301,13 +319,8 @@ void plot_results(cv::Mat img, std::vector<YoloResults>& results,
                 cv::Mat shrunk_mask = cv::Mat::zeros(mask.size(), CV_8UC1);
                 cv::fillConvexPoly(shrunk_mask, shrunk_quad, 255);
 
-                //黒背景？
-                // 切り抜き
-                //cv::Mat segmented_shrunk;
-                //cropped_img.copyTo(segmented_shrunk, shrunk_mask);
-
-                //透明背景？
-                //4チャンネル？
+                //透明背景
+                //4チャンネル
                 cv::Mat segmented_shrunk(shrunk_mask.size(), CV_8UC4, cv::Scalar(0, 0, 0, 0)); // 完全に透明な画像
                 for (int y = 0; y < cropped_img.rows; ++y) {
                     for (int x = 0; x < cropped_img.cols; ++x) {
@@ -321,7 +334,8 @@ void plot_results(cv::Mat img, std::vector<YoloResults>& results,
 
 
                 // 表示・保存
-                fs::path output_folder = "/home/user/crack_detection/results_cut";
+                fs::create_directories("/home/user/crack_detection/abcdresults_cut");
+                fs::path output_folder = "/home/user/crack_detection/abcdresults_cut";
                 std::string extension = ".png";
                 std::ostringstream oss;
                 oss << file_name << "_" << instance_counter << extension;
@@ -335,88 +349,88 @@ void plot_results(cv::Mat img, std::vector<YoloResults>& results,
             
         }
 
-        // Create label
-        std::stringstream labelStream;
-        labelStream << class_name << " " << std::fixed << std::setprecision(2) << res.conf;
-        std::string label = labelStream.str();
+            // Create label
+            std::stringstream labelStream;
+            labelStream << class_name << " " << std::fixed << std::setprecision(2) << res->conf;
+            std::string label = labelStream.str();
 
-        cv::Size text_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.6, 2, nullptr);
-        cv::Rect rect_to_fill(left - 1, top - text_size.height - 5, text_size.width + 2, text_size.height + 5);
-        cv::Scalar text_color = cv::Scalar(255.0, 255.0, 255.0);
-        rectangle(img, rect_to_fill, color[res.class_idx], -1);
-        putText(img, label, cv::Point(left - 1.5, top - 2.5), cv::FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2);
+            cv::Size text_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.6, 2, nullptr);
+            cv::Rect rect_to_fill(left - 1, top - text_size.height - 5, text_size.width + 2, text_size.height + 5);
+            cv::Scalar text_color = cv::Scalar(255.0, 255.0, 255.0);
+            rectangle(img, rect_to_fill, color[res->class_idx], -1);
+            putText(img, label, cv::Point(left - 1.5, top - 2.5), cv::FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2);
 
-        // Check if keypoints are available
-        if (!res.keypoints.empty()) {
-            auto keypoint = res.keypoints;
-            bool isPose = keypoint.size() == 51;  // numKeypoints == 17 && keypoints[0].size() == 3;
-            drawLines &= isPose;
+            // Check if keypoints are available
+            if (!res->keypoints.empty()) {
+                auto keypoint = res->keypoints;
+                bool isPose = keypoint.size() == 51;  // numKeypoints == 17 && keypoints[0].size() == 3;
+                drawLines &= isPose;
 
-            // draw points
-            for (int i = 0; i < 17; i++) {
-                int idx = i * 3;
-                int x_coord = static_cast<int>(keypoint[idx]);
-                int y_coord = static_cast<int>(keypoint[idx + 1]);
+                // draw points
+                for (int i = 0; i < 17; i++) {
+                    int idx = i * 3;
+                    int x_coord = static_cast<int>(keypoint[idx]);
+                    int y_coord = static_cast<int>(keypoint[idx + 1]);
 
-                if (x_coord % raw_image_shape.width != 0 && y_coord % raw_image_shape.height != 0) {
-                    if (keypoint.size() == 3) {
-                        float conf = keypoint[2];
-                        if (conf < 0.5) {
+                    if (x_coord % raw_image_shape.width != 0 && y_coord % raw_image_shape.height != 0) {
+                        if (keypoint.size() == 3) {
+                            float conf = keypoint[2];
+                            if (conf < 0.5) {
+                                continue;
+                            }
+                        }
+                        cv::Scalar color_k = isPose ? kptColorPalette[i] : cv::Scalar(0, 0,
+                                                                                    255);  // Default to red if not in pose mode
+                        cv::circle(img, cv::Point(x_coord, y_coord), radius, color_k, -1, cv::LINE_AA);
+                    }
+                }
+                // draw lines
+                if (drawLines) {
+                    for (int i = 0; i < skeleton.size(); i++) {
+                        const std::vector<int> &sk = skeleton[i];
+                        int idx1 = sk[0] - 1;
+                        int idx2 = sk[1] - 1;
+
+                        int idx1_x_pos = idx1 * 3;
+                        int idx2_x_pos = idx2 * 3;
+
+                        int x1 = static_cast<int>(keypoint[idx1_x_pos]);
+                        int y1 = static_cast<int>(keypoint[idx1_x_pos + 1]);
+                        int x2 = static_cast<int>(keypoint[idx2_x_pos]);
+                        int y2 = static_cast<int>(keypoint[idx2_x_pos + 1]);
+
+                        float conf1 = keypoint[idx1_x_pos + 2];
+                        float conf2 = keypoint[idx2_x_pos + 2];
+
+                        // Check confidence thresholds
+                        if (conf1 < 0.5 || conf2 < 0.5) {
                             continue;
                         }
+
+                        // Check if positions are within bounds
+                        if (x1 % raw_image_shape.width == 0 || y1 % raw_image_shape.height == 0 || x1 < 0 || y1 < 0 ||
+                            x2 % raw_image_shape.width == 0 || y2 % raw_image_shape.height == 0 || x2 < 0 || y2 < 0) {
+                            continue;
+                        }
+
+                        // Draw a line between keypoints
+                        cv::Scalar color_limb = limbColorPalette[i];
+                        cv::line(img, cv::Point(x1, y1), cv::Point(x2, y2), color_limb, 2, cv::LINE_AA);
                     }
-                    cv::Scalar color_k = isPose ? kptColorPalette[i] : cv::Scalar(0, 0,
-                                                                                  255);  // Default to red if not in pose mode
-                    cv::circle(img, cv::Point(x_coord, y_coord), radius, color_k, -1, cv::LINE_AA);
                 }
             }
-            // draw lines
-            if (drawLines) {
-                for (int i = 0; i < skeleton.size(); i++) {
-                    const std::vector<int> &sk = skeleton[i];
-                    int idx1 = sk[0] - 1;
-                    int idx2 = sk[1] - 1;
 
-                    int idx1_x_pos = idx1 * 3;
-                    int idx2_x_pos = idx2 * 3;
-
-                    int x1 = static_cast<int>(keypoint[idx1_x_pos]);
-                    int y1 = static_cast<int>(keypoint[idx1_x_pos + 1]);
-                    int x2 = static_cast<int>(keypoint[idx2_x_pos]);
-                    int y2 = static_cast<int>(keypoint[idx2_x_pos + 1]);
-
-                    float conf1 = keypoint[idx1_x_pos + 2];
-                    float conf2 = keypoint[idx2_x_pos + 2];
-
-                    // Check confidence thresholds
-                    if (conf1 < 0.5 || conf2 < 0.5) {
-                        continue;
-                    }
-
-                    // Check if positions are within bounds
-                    if (x1 % raw_image_shape.width == 0 || y1 % raw_image_shape.height == 0 || x1 < 0 || y1 < 0 ||
-                        x2 % raw_image_shape.width == 0 || y2 % raw_image_shape.height == 0 || x2 < 0 || y2 < 0) {
-                        continue;
-                    }
-
-                    // Draw a line between keypoints
-                    cv::Scalar color_limb = limbColorPalette[i];
-                    cv::line(img, cv::Point(x1, y1), cv::Point(x2, y2), color_limb, 2, cv::LINE_AA);
-                }
-            }
-        }
+        // Combine the image and mask
+        addWeighted(img, 0.6, mask, 0.4, 0, img);
     }
-
-    // Combine the image and mask
-    addWeighted(img, 0.6, mask, 0.4, 0, img);
 }
 
 
 
 int main()
 {    
-    std::string image_folder = "/home/user/crack_detection/original_imgs";
-    const std::string& modelPath = "/home/user/crack_detection/checkpoints/best_n_ex_2.onnx";
+    std::string image_folder = "/home/user/crack_detection/imgs_test0806";
+    const std::string& modelPath = "/home/user/crack_detection/checkpoints/best_640_s.onnx";
     const std::string& onnx_provider = OnnxProviders::CPU;
     const std::string& onnx_logid = "yolov8_inference2";
     float mask_threshold = 0.5f;
@@ -432,7 +446,7 @@ int main()
         if (entry.is_regular_file()) {
             std::string img_path = entry.path().string();
 
-            if (entry.path().extension() != ".JPG") {
+            if (entry.path().extension() != ".png") {
             continue;
             }
 
@@ -451,11 +465,11 @@ int main()
 
             fs::path output_path_ex = output_path;
 
-            fs::create_directories("/home/user/crack_detection/results");
+            fs::create_directories("/home/user/crack_detection/abcdresults");
 
             output_path += entry.path().extension();
             //output_path = entry.path().parent_path() / output_path;
-            output_path = fs::path("/home/user/crack_detection/results") / output_path;
+            output_path = fs::path("/home/user/crack_detection/abcdresults") / output_path;
 
             cv::cvtColor(img, img, cv::COLOR_RGB2BGR);
             cv::Size show_shape = img.size();
